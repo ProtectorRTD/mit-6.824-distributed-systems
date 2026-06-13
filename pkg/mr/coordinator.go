@@ -1,33 +1,28 @@
 package mr
 
-import "log"
-import "net"
-import "os"
-import "net/rpc"
-import "net/http"
+import (
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+)
 
-
+// map[int] -> where int workerId (for now, will be change)
 type Coordinator struct {
-	// Your definitions here.
-
+	NReduce        int
+	NMap           int
+	Files          []string
+	TaskQueue      []Task
+	TaskProcessing map[int]Task
 }
 
-// Your code here -- RPC handlers for the worker to call.
+func (c *Coordinator) RequestTask(args *RequestTask, reply *Task) error {
 
-//
-// an example RPC handler.
-//
-// the RPC argument and reply types are defined in rpc.go.
-//
-func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
-	reply.Y = args.X + 1
 	return nil
 }
 
-
-//
 // start a thread that listens for RPCs from worker.go
-//
 func (c *Coordinator) server() {
 	rpc.Register(c)
 	rpc.HandleHTTP()
@@ -41,30 +36,29 @@ func (c *Coordinator) server() {
 	go http.Serve(l, nil)
 }
 
-//
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
-//
 func (c *Coordinator) Done() bool {
-	ret := false
-
-	// Your code here.
-
-
-	return ret
+	//podumat -> remainingMapTasks == 0 && remainingReduceTasks == 0
+	if len(c.TaskQueue) == 0 && len(c.TaskProcessing) == 0 {
+		return true
+	} else {
+		return false
+	}
 }
 
-//
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
-//
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
-	c := Coordinator{}
-
-	// Your code here.
-
+	c := &Coordinator{
+		NReduce:        nReduce,
+		NMap:           len(files),
+		Files:          files,
+		TaskQueue:      make([]Task, 0),
+		TaskProcessing: make(map[int]Task),
+	}
 
 	c.server()
-	return &c
+	return c
 }
