@@ -25,6 +25,11 @@ type Task struct {
 	NMap      uint8
 }
 
+// Error implements [error].
+func (t Task) Error() string {
+	panic("something went not as expected")
+}
+
 type RequestTask struct {
 	WorkerId int
 }

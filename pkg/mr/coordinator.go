@@ -6,10 +6,14 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"sync"
 )
 
+// todo question still do we need really a task processing
 // map[int] -> where int workerId (for now, will be change)
+
 type Coordinator struct {
+	mutex          sync.Mutex
 	NReduce        int
 	NMap           int
 	Files          []string
@@ -18,7 +22,10 @@ type Coordinator struct {
 }
 
 func (c *Coordinator) RequestTask(args *RequestTask, reply *Task) error {
-
+	c.mutex.Lock()
+	*reply = c.TaskQueue[0]
+	c.TaskQueue = c.TaskQueue[1:]
+	c.mutex.Unlock()
 	return nil
 }
 
@@ -52,6 +59,7 @@ func (c *Coordinator) Done() bool {
 // nReduce is the number of reduce tasks to use.
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := &Coordinator{
+		mutex:          sync.Mutex{},
 		NReduce:        nReduce,
 		NMap:           len(files),
 		Files:          files,
