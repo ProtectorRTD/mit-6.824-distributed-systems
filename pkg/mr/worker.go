@@ -5,7 +5,11 @@ import (
 	"hash/fnv"
 	"log"
 	"net/rpc"
+	"os"
 )
+
+//TODO
+//ihash прочитать бакет мап редьюс (визуал диаграмму)
 
 // Map functions return a slice of KeyValue.
 type KeyValue struct {
@@ -24,27 +28,55 @@ func ihash(key string) int {
 // main/mrworker.go calls this function.
 func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
-
 	// Your worker implementation here.
+	var task = requestTask()
+	for {
+		switch task.TaskType {
+		case 0:
+			//exit -> stop the endless loop
+			return
+		case 1:
+			doWait(task)
+		case 2:
+			doMap(task, mapf)
+		case 3:
+			doReduce(task)
+		}
+	}
+}
 
-	callCoordinator()
+func doMap(task Task, mapf func(string, string) []KeyValue) {
+	contentBytes, err := os.ReadFile(task.FileName)
+	if err != nil {
+		// handle error
+		print("File not read correctly at Worker doMap")
+	}
+	kva := mapf(task.FileName, string(contentBytes))
+}
+
+func doReduce(task Task) {
+	//reduce logic
+}
+
+func doWait(task Task) {
+	//wait logic
 }
 
 // example function to show how to make an RPC call to the coordinator.
 //
 // the RPC argument and reply types are defined in rpc.go.
-func callCoordinator() {
-
+func requestTask() Task {
 	// declare an argument structure.
 	args := RequestTask{}
-
 	// declare a reply structure.
 	reply := Task{}
-
 	// send the RPC request, wait for the reply.
 	call("Coordinator.RequestTask", &args, &reply)
+	return reply
 }
 
+// not need to change
+// =================================================================
 // send an RPC request to the coordinator, wait for the response.
 // usually returns true.
 // returns false if something goes wrong.

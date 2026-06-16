@@ -9,21 +9,26 @@ import (
 	"sync"
 )
 
-// todo question still do we need really a task processing
-// map[int] -> where int workerId (for now, will be change)
+//TODO read about the wait in MapReduce
+//Intermidiate file write Worker or Master ?
 
 type Coordinator struct {
-	mutex          sync.Mutex
-	NReduce        int
-	NMap           int
-	Files          []string
-	TaskQueue      []Task
-	TaskProcessing map[int]Task
+	mutex       sync.Mutex
+	NReduce     int
+	NMap        int
+	Files       []string
+	TaskQueue   []Task
+	pendingTask uint8
 }
 
 func (c *Coordinator) RequestTask(args *RequestTask, reply *Task) error {
 	c.mutex.Lock()
-	*reply = c.TaskQueue[0]
+	head := c.TaskQueue[0]
+	//3 == REDUCE
+	if head.TaskType == 3 {
+		c.pendingTask--
+	}
+	*reply = head
 	c.TaskQueue = c.TaskQueue[1:]
 	c.mutex.Unlock()
 	return nil
@@ -46,27 +51,35 @@ func (c *Coordinator) server() {
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
 func (c *Coordinator) Done() bool {
-	//podumat -> remainingMapTasks == 0 && remainingReduceTasks == 0
-	if len(c.TaskQueue) == 0 && len(c.TaskProcessing) == 0 {
+	if c.pendingTask == 0 {
 		return true
 	} else {
 		return false
 	}
 }
 
-// create a Coordinator.
 // main/mrcoordinator.go calls this function.
-// nReduce is the number of reduce tasks to use.
-func MakeCoordinator(files []string, nReduce int) *Coordinator {
+func MakeCoordinator(fileNames []string, nReduce int) *Coordinator {
+	mapAmount := len(fileNames)
 	c := &Coordinator{
-		mutex:          sync.Mutex{},
-		NReduce:        nReduce,
-		NMap:           len(files),
-		Files:          files,
-		TaskQueue:      make([]Task, 0),
-		TaskProcessing: make(map[int]Task),
+		mutex:       sync.Mutex{},
+		NReduce:     nReduce,
+		NMap:        mapAmount,
+		Files:       fileNames,
+		TaskQueue:   make([]Task, 0),
+		pendingTask: uint8(mapAmount),
 	}
-
+	for i := 0; i < mapAmount; i++ {
+		task := Task{
+			TaskId:    1,
+			TaskState: IDLE,
+			TaskType:  MAP,
+			NReduce:   uint8(nReduce),
+			NMap:      uint8(mapAmount),
+			FileName:  fileNames[i],
+		}
+		c.TaskQueue = append(c.TaskQueue, task)
+	}
 	c.server()
 	return c
 }

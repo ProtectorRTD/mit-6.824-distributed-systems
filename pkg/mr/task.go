@@ -17,12 +17,14 @@ const (
 	REDUCE
 )
 
+// in future adjust, what is public/private
 type Task struct {
 	TaskId    int
 	TaskState TaskState
 	TaskType  TaskType
 	NReduce   uint8
 	NMap      uint8
+	FileName  string
 }
 
 // Error implements [error].
