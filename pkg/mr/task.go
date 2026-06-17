@@ -19,7 +19,7 @@ const (
 
 // in future adjust, what is public/private
 type Task struct {
-	TaskId    int
+	TaskId    string
 	TaskState TaskState
 	TaskType  TaskType
 	NReduce   uint8
@@ -34,4 +34,10 @@ func (t Task) Error() string {
 
 type RequestTask struct {
 	WorkerId int
+	Result   ResultOfTask
+}
+
+type ResultOfTask struct {
+	TaskId  string
+	Success bool
 }
