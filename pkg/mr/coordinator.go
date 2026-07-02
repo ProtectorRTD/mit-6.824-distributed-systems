@@ -51,6 +51,7 @@ func (c *Coordinator) RequestTask(args *RequestTask, reply *Task) error {
 
 	head := c.Tasks[0]
 	c.Tasks = c.Tasks[1:]
+	head.TaskState = IN_PROGRESS
 
 	*reply = head
 
@@ -85,16 +86,17 @@ func (c *Coordinator) generateReduceTask() {
 	}
 }
 
-func (c *Coordinator) reportDone(result *ResultOfTask) error {
+func (c *Coordinator) ReportDone(args *ResultOfTask, reply *struct{}) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if !result.Success {
-		return fmt.Errorf("worker reported failure for task %s", result.TaskId)
+	if !args.Success {
+		return fmt.Errorf("worker reported failure for task %s", args.TaskId)
 	}
-	taskId := result.TaskId
+	taskId := args.TaskId
 	task, ok := c.pendingTask[taskId]
 	if !ok {
 		// taskId не существует
+		return nil
 	} else {
 		if c.pendingTask[taskId].TaskType == MAP {
 
@@ -129,7 +131,7 @@ func (c *Coordinator) Done() bool {
 	return false
 }
 
-func (c *Coordinator) sheduler() {
+func (c *Coordinator) scheduler() {
 	for {
 		time.Sleep(time.Second)
 		c.mutex.Lock()
@@ -175,7 +177,7 @@ func MakeCoordinator(fileNames []string, nReduce int) *Coordinator {
 		c.Tasks = append(c.Tasks, task)
 	}
 	c.server()
-	go c.sheduler()
+	go c.scheduler()
 	return c
 }
 
