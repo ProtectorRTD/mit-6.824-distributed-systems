@@ -36,7 +36,7 @@ func (c *Coordinator) RequestTask(args *RequestTask, reply *Task) error {
 	// (бесконечно может быть), попросит новую, создат редьюс
 	if c.RemainingReduce <= 0 && c.RemainingMap <= 0 {
 		*reply = *c.generateExitTask()
-		c.Done()
+		c.mutex.Unlock()
 		return nil
 	}
 	if c.RemainingMap <= 0 && c.reduceGenerated == false {
